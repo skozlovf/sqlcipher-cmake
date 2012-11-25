@@ -40,7 +40,7 @@ To build debug version of sqlcipher lib (static lib, dynamic runtime), shell, qs
 
     cmake -G"NMake Makefiles" -DCMAKE_BUILD_TYPE=Debug -DOPENSSL_MT=OFF -DOPENSSL_STATIC=ON
     
-To bould just sqlcipher lib with MSYS make:
+To build just sqlcipher lib with MSYS make:
     
     cmake -G"MSYS Makefiles" -DBUILD_QT_PLUGIN=OFF -DBUILD_SHELL=OFF
     
