@@ -20,7 +20,7 @@ Open CMakeLists.txt and modify the following variables:
   * ```CIPHER_ROOT```     - SQLite Cipher path
   * ```OPENSSL_ROOT```    - Win32 OpenSSL instalation path
 
-Also CMake scropt provides a couple of options:
+Also CMake script provides a couple of options:
   * ```OPENSSL_MT```      - Use OpenSSL MT libs instead of MD (only for msvc, disabled by default)
   * ```OPENSSL_STATIC```  - Use OpenSSL static libs instead of dynamic (only for msvc, disabled by default)
   * ```BUILD_QT_PLUGIN``` - Build Qt sql plugin (enabled by default)
