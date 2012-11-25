@@ -72,7 +72,7 @@ set(OPENSSL_ROOT "D:/programs/OpenSSL-Win32")
 option(OPENSSL_MT "Use OpenSSL MT libs instead of MD" OFF)
 option(OPENSSL_STATIC "Use OpenSSL static libs instead of dynamic" OFF)
 option(BUILD_QT_PLUGIN "Build Qt sql plugin" ON)
-option(BUILD_SHELL "BUild sqlite shell" ON)
+option(BUILD_SHELL "Build sqlite shell" ON)
 
 ##########################################################
 ## Tools
