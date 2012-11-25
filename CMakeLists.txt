@@ -71,7 +71,8 @@ set(OPENSSL_ROOT "D:/programs/OpenSSL-Win32")
 
 option(OPENSSL_MT "Use OpenSSL MT libs instead of MD" OFF)
 option(OPENSSL_STATIC "Use OpenSSL static libs instead of dynamic" OFF)
-
+option(BUILD_QT_PLUGIN "Build Qt sql plugin" ON)
+option(BUILD_SHELL "BUild sqlite shell" ON)
 
 ##########################################################
 ## Tools
@@ -79,40 +80,45 @@ option(OPENSSL_STATIC "Use OpenSSL static libs instead of dynamic" OFF)
 
 ### Helper macro to search files
 macro(aux_find_file Var Name Path)
-    set(Tmp-${Var} Tmp-${Var}-NOTFOUND)
-    find_file(Tmp-${Var} ${Name} PATHS ${Path})
-    if (Tmp-${Var}-NOTFOUND)
+    set(${Var} ${Var}-NOTFOUND)
+    find_file(${Var} ${Name} PATHS ${Path})
+    if (${Var}-NOTFOUND)
         message(FATAL_ERROR "Can't find ${Name}")
     endif()
-    message(STATUS "[${Name}] ${Tmp-${Var}}")
-    set(${Var} ${Tmp-${Var}})
+    message(STATUS "[${Name}] ${${Var}}")
 endmacro()
 
 ### Helper macro to find OpenSSL eay lib
 macro(aux_find_openssl_lib Var)
-    if (OPENSSL_MT)
-        set(OpenSSLEay libeay32MT)
-    else()
-        set(OpenSSLEay libeay32MD)
-    endif()
-
-    if (OPENSSL_STATIC)
-        set(OpenSSLPostfix lib/VC/static)
-    else()
-        set(OpenSSLPostfix lib/VC)
-    endif()
-
     set(OPENSSL_EAY_RELEASE OPENSSL_EAY_RELEASE-NOTFOUND)
     set(OPENSSL_EAY_DEBUG OPENSSL_EAY_DEBUG-NOTFOUND)
-    set(${Var} FALSE)
+    set(${Var} ${Var}-NOTFOUND)
 
-    find_library(OPENSSL_EAY_RELEASE ${OpenSSLEay} ${OPENSSL_ROOT}/${OpenSSLPostfix})
-    find_library(OPENSSL_EAY_DEBUG ${OpenSSLEay}d ${OPENSSL_ROOT}/${OpenSSLPostfix})
-    if(CMAKE_BUILD_TYPE STREQUAL Debug)
-        set(${Var} ${OPENSSL_EAY_DEBUG})
+    if (MSVC)
+        if (OPENSSL_MT)
+            set(OpenSSLEay libeay32MT)
+        else()
+            set(OpenSSLEay libeay32MD)
+        endif()
+
+        if (OPENSSL_STATIC)
+            set(OpenSSLPostfix lib/VC/static)
+        else()
+            set(OpenSSLPostfix lib/VC)
+        endif()
+
+        find_library(OPENSSL_EAY_RELEASE ${OpenSSLEay} ${OPENSSL_ROOT}/${OpenSSLPostfix} NO_DEFAULT_PATH)
+        find_library(OPENSSL_EAY_DEBUG ${OpenSSLEay}d ${OPENSSL_ROOT}/${OpenSSLPostfix} NO_DEFAULT_PATH)
+        if(CMAKE_BUILD_TYPE STREQUAL Debug)
+            set(${Var} ${OPENSSL_EAY_DEBUG})
+        else()
+            set(${Var} ${OPENSSL_EAY_RELEASE})
+        endif()
     else()
-        set(${Var} ${OPENSSL_EAY_RELEASE})
+        set(OpenSSLEay libeay32)
+        find_library(${Var} ${OpenSSLEay} ${OPENSSL_ROOT}/lib/MinGW NO_DEFAULT_PATH)
     endif()
+
     if(NOT ${Var})
         message(FATAL_ERROR "Can't find ${OpenSSLEay}")
     else()
@@ -126,14 +132,18 @@ endmacro()
 ##########################################################
 
 ### First of all find lib.exe
-find_program(MSVC_LIB lib)
-if (MSVC_LIB-NOTFOUND)
-    message(FATAL_ERROR "Can't find msvc tool: lib.exe")
+if (MSVC)
+    find_program(MSVC_LIB lib)
+    if (MSVC_LIB-NOTFOUND)
+        message(FATAL_ERROR "Can't find msvc tool: lib.exe")
+    endif()
 endif()
 
 ### Configure Qt4
-find_package(Qt4 COMPONENTS QtCore QtSql REQUIRED)
-include(${QT_USE_FILE})
+if (BUILD_QT_PLUGIN)
+    find_package(Qt4 COMPONENTS QtCore QtSql REQUIRED)
+    include(${QT_USE_FILE})
+endif()
 
 
 message(STATUS "Searching files")
@@ -185,7 +195,7 @@ string(REGEX REPLACE "#include \"crypto.h\"" "" BUF "${BUF}")
 file(APPEND ${CRYPTO_SRC} "${BUF}")
 
 message(STATUS "Preparing crypto.c - done")
-
+message(STATUS "Build shell: ${BUILD_SHELL}")
 
 ### Configure targets
 set(CMAKE_DEBUG_POSTFIX d)
@@ -197,18 +207,26 @@ add_definitions(${CIPHER_DEF})
 add_library(sqlcipher STATIC ${SQLITESRC_C})
 target_link_libraries(sqlcipher ${OPENSSL_LIB})
 
-add_custom_command(TARGET sqlcipher POST_BUILD
-                   COMMAND ${MSVC_LIB} ARGS "/OUT:$<TARGET_FILE:sqlcipher>" $<TARGET_FILE:sqlcipher> ${OPENSSL_LIB})
+# combine libeay and sqlcipher libs into single sqlcipher.lib
+if (MSVC)
+    add_custom_command(TARGET sqlcipher POST_BUILD
+                       COMMAND ${MSVC_LIB}
+                       ARGS "/OUT:$<TARGET_FILE:sqlcipher>" $<TARGET_FILE:sqlcipher> ${OPENSSL_LIB})
+endif()
 
 # sqlite tool
-add_executable(sqlite ${SQLITE_SHELL_C})
-target_link_libraries(sqlite sqlcipher)
-add_dependencies(sqlite sqlcipher)
+if (BUILD_SHELL)
+    add_executable(sqlite ${SQLITE_SHELL_C})
+    target_link_libraries(sqlite sqlcipher)
+    add_dependencies(sqlite sqlcipher)
+endif()
 
 # Qt4 sqlcipher plugin
-add_definitions(-DQT_PLUGIN)
-qt4_wrap_cpp(SRC ${QT_INCLUDE_DIR}/../src/sql/drivers/sqlite/qsql_sqlite.h)
-add_library(qsqlcipher4 SHARED smain.cpp ${SRC} ${QT_INCLUDE_DIR}/../src/sql/drivers/sqlite/qsql_sqlite.cpp)
-target_link_libraries(qsqlcipher4 ${QT_LIBRARIES} sqlcipher)
-add_dependencies(qsqlcipher4 sqlcipher)
-install(TARGETS qsqlcipher4 DESTINATION ${QT_PLUGINS_DIR}/sqldrivers)
+if (BUILD_QT_PLUGIN)
+    add_definitions(-DQT_PLUGIN)
+    qt4_wrap_cpp(SRC ${QT_INCLUDE_DIR}/../src/sql/drivers/sqlite/qsql_sqlite.h)
+    add_library(qsqlcipher4 SHARED smain.cpp ${SRC} ${QT_INCLUDE_DIR}/../src/sql/drivers/sqlite/qsql_sqlite.cpp)
+    target_link_libraries(qsqlcipher4 ${QT_LIBRARIES} sqlcipher)
+    add_dependencies(qsqlcipher4 sqlcipher)
+    install(TARGETS qsqlcipher4 DESTINATION ${QT_PLUGINS_DIR}/sqldrivers)
+endif()
