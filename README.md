@@ -43,3 +43,14 @@ To build debug version of sqlcipher lib (static lib, dynamic runtime), shell, qs
 To bould just sqlcipher lib with MSYS make:
     
     cmake -G"MSYS Makefiles" -DBUILD_QT_PLUGIN=OFF -DBUILD_SHELL=OFF
+    
+    
+Notes
+=====
+
+Inspired by
+  * [domehead100](https://groups.google.com/d/msg/sqlcipher/ISwSo2Vq-B8/x205cECTiI0J)
+  * [crossplatform.ru](http://www.wiki.crossplatform.ru/index.php/%D0%9F%D1%80%D0%B8%D0%B2%D1%8F%D0%B7%D0%BA%D0%B0_SQLCipher_%D0%BA_Qt)
+
+Tested with SQLCipher-2.0.6, sqlite-3.7.14.1, Qt-4.8.3, OpenSSL-1.0.1b.
+For more info see CMakeLists.txt comments.
